@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev --test-scheduled",
+    "dev": "npm run dev-worker & npm run dev-html",
+    "dev-worker": "wrangler dev --test-scheduled",
+    "dev-html": "ws --spa public/index.html",
     "start": "wrangler dev --test-scheduled",
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240725.0",
+    "local-web-server": "^5.3.4",
     "typescript": "^5.5.2",
     "wrangler": "^3.60.3"
   }

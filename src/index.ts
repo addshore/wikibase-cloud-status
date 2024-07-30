@@ -15,8 +15,8 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-const CACHE_HTML_BROWSER = 60;
-const CACHE_HTML_EDGE = 60;
+const CACHE_HTML_BROWSER = 60*60;;
+const CACHE_HTML_EDGE = 60*60;
 const CACHE_DATA_BROWSER = 60;
 const CACHE_DATA_EDGE = 60;
 
@@ -46,10 +46,11 @@ async function servePage(event: Request<unknown, IncomingRequestCfProperties<unk
 	const url = new URL(event.url);
 	let response = await cache.match(url);
 	if (!response) {
-		// its hello world
-		response = new Response('Hello world!', {
+		// redirect people to https://addshore.github.io/wikibase-cloud-status/
+		response = new Response('', {
+			status: 302,
 			headers: {
-				'content-type': 'text/html',
+				'Location': 'https://addshore.github.io/wikibase-cloud-status/',
 				'cache-control': `public, max-age=${CACHE_HTML_BROWSER}, s-maxage=${CACHE_HTML_EDGE}`,
 			},
 		});
