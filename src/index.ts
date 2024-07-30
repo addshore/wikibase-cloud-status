@@ -15,29 +15,24 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-const CACHE_BROWSER = 60;
-const CACHE_EDGE = 60;
+const CACHE_HTML_BROWSER = 60;
+const CACHE_HTML_EDGE = 60;
+const CACHE_DATA_BROWSER = 60;
+const CACHE_DATA_EDGE = 60;
 
 export default {
 	async fetch(event, env: Env, ctx): Promise<Response> {
 		const url = new URL(event.url);
-		if (url.pathname !== '/') {
-			return new Response('Not Found', {status: 404});
+		if (url.pathname === '/') {
+			return servePage(event, env, ctx);
 		}
 
-		const cache = caches.default;
-		// Check if the request is in the cache
-		let response = await cache.match(url);
-		if (!response) {
-			// If not in the cache, get the response from the origin
-			response = await freshResponse(env);
-			// Store the response in the cache for 60 seconds
-			ctx.waitUntil(cache.put(url, response.clone()));
+		if (url.pathname === '/data') {
+			return serveData(event, env, ctx);
 		}
-		return response || new Response('An error occurred!', { status: 500 });
 
-
-
+		// Serve 404 as a default
+		return new Response('Not found', { status: 404 });
 	},
 	// The scheduled handler is invoked at the interval set in our wrangler.toml's
 	// [[triggers]] configuration.
@@ -46,12 +41,45 @@ export default {
 	}
 } satisfies ExportedHandler<Env>;
 
-async function freshResponse(env: Env) : Promise<Response> {
+async function servePage(event: Request<unknown, IncomingRequestCfProperties<unknown>>, env: Env, ctx: ExecutionContext) : Promise<Response> {
+	const cache = caches.default;
+	const url = new URL(event.url);
+	let response = await cache.match(url);
+	if (!response) {
+		// its hello world
+		response = new Response('Hello world!', {
+			headers: {
+				'content-type': 'text/html',
+				'cache-control': `public, max-age=${CACHE_HTML_BROWSER}, s-maxage=${CACHE_HTML_EDGE}`,
+			},
+		});
+		// Store the response in the cache for 60 seconds
+		ctx.waitUntil(cache.put(url, response.clone()));
+	}
+	return response || new Response('An error occurred!', { status: 500 });
+}
+
+async function serveData(event: Request<unknown, IncomingRequestCfProperties<unknown>>, env: Env, ctx: ExecutionContext) : Promise<Response> {
+	const url = new URL(event.url);
+	const cache = caches.default;
+	// Check if the request is in the cache
+	let response = await cache.match(url);
+	if (!response) {
+		// If not in the cache, get the response from the origin
+		response = await freshData(env);
+		// Store the response in the cache for 60 seconds
+		ctx.waitUntil(cache.put(url, response.clone()));
+	}
+	return response || new Response('An error occurred!', { status: 500 });
+}
+
+async function freshData(env: Env) : Promise<Response> {
 	// The following query will get 1 weeks worth of data from the store
 	const query = `SELECT toStartOfInterval(timestamp, INTERVAL '1' MINUTE) as timestamp, index1 as check, double1 as status, double2 as bytes, double3 as time, double4 as extra
 	from wbc_status
 	where blob1 = 'dev_wbc_check_0001'
-	and timestamp >= toDateTime(toUnixTimestamp(now()) - 7*24*60*60) and timestamp <= now()`
+	and timestamp >= toDateTime(toUnixTimestamp(now()) - 7*24*60*60) and timestamp <= now()
+	ORDER BY timestamp desc`
 	
 	const API = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/analytics_engine/sql`;
 	const queryResponse = await fetch(API, {
@@ -77,7 +105,8 @@ async function freshResponse(env: Env) : Promise<Response> {
 		{
 			headers: {
 				'content-type': 'application/json',
-				'cache-control': `public, max-age=${CACHE_BROWSER}, s-maxage=${CACHE_EDGE}`,
+				'cache-control': `public, max-age=${CACHE_DATA_BROWSER}, s-maxage=${CACHE_DATA_EDGE}`,
+				'Access-Control-Allow-Origin': '*',
 			},
 		}
 	);
