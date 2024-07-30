@@ -3,4 +3,6 @@
 
 interface Env {
 	WBCLOUD_STATUS: AnalyticsEngineDataset;
+	ACCOUNT_ID: string;
+	API_TOKEN: string;
 }
