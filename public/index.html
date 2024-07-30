@@ -3,7 +3,7 @@
     <title>Wikibase cloud status</title>
     <script src="https://cdn.plot.ly/plotly-2.34.0.min.js" charset="utf-8"></script>
     <script>
-        fetch('http://localhost:8787/data')
+        fetch('https://wikibase-cloud-status.addshore.workers.dev/data')
             .then(response => response.json())
             .then(data => {
                 // Data looks like a list of these entries
@@ -188,7 +188,7 @@
 </head>
 <body>
     <h1>Wikibase cloud status</h1>
-    <p>Showing you the last 7 days of data collected minuitely for the wikibase.cloud platform</p>
+    <p>Showing you the last 7 days of data collected every 1 minuite for the wikibase.cloud platform from cloudflare workers</p>
     <p>Checks include:</p>
     <ul>
         <li>Response time and 200 status of all services</li>
@@ -196,7 +196,7 @@
         <li>Successful search for an item</li>
         <li>Maxlag < 10</li>
     </ul>
-    <p id="loading">Loading (JS required)...</p>
+    <p id="loading">Loading (JS required), this might take a few seconds...</p>
     <div id="system-status"></div>
     <div id="system-response"></div>
     <p>Code and data by addshore</p>
