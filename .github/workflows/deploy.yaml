@@ -4,21 +4,28 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-22.04
     permissions:
-      contents: write
+      contents: read
+      pages: write
+      id-token: write
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: "pages"
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true 
           fetch-depth: 0
-
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-            folder: public
+            path: './public'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
