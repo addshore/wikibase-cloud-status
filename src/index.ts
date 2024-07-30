@@ -1,0 +1,121 @@
+/**
+ * Welcome to Cloudflare Workers!
+ *
+ * This is a template for a Scheduled Worker: a Worker that can run on a
+ * configurable interval:
+ * https://developers.cloudflare.com/workers/platform/triggers/cron-triggers/
+ *
+ * - Run `npm run dev` in your terminal to start a development server
+ * - Run `curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"` to see your worker in action
+ * - Run `npm run deploy` to publish your worker
+ *
+ * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
+ * `Env` object can be regenerated with `npm run cf-typegen`.
+ *
+ * Learn more at https://developers.cloudflare.com/workers/
+ */
+
+export default {
+	// async fetch(event, env: Env, ctx): Promise<Response> {
+	// 	await doChecks(env);
+	// 	return new Response("Checks done!");
+	// },
+	// The scheduled handler is invoked at the interval set in our wrangler.toml's
+	// [[triggers]] configuration.
+	async scheduled(event, env: Env, ctx): Promise<void> {
+		await doChecks(env)
+	}
+} satisfies ExportedHandler<Env>;
+
+async function doChecks(env: Env) {
+	const simple200Checks = [
+		"https://potato.wikibase.cloud/wiki/Item:Q1",
+		"https://www.wikibase.cloud/",
+		"https://potato.wikibase.cloud/query/",
+		"https://potato.wikibase.cloud/tools/cradle/",
+		"https://potato.wikibase.cloud/tools/quickstatements/",
+	]
+
+	// It's around 1500ms to do all these checks one by one, or ~200-400 or so at once
+	// Doing them all at once shouldnt cause any damage, as each request is to a different service (other than going via ingress / nginx)
+	await Promise.all([
+		checkSPARQL(env),
+		checkElastic(env),
+		checkMaxlag(env),
+		...simple200Checks.map(url => check200(env, url))
+	]);
+	
+}
+
+async function checkSPARQL (env: Env) {
+	const url = "https://potato.wikibase.cloud/query/sparql?query=SELECT%20*%20WHERE%20%7B%3Fa%20%3Fb%20%3Fc%7D";
+	const start = Date.now();
+	const response = await f(url);
+	const responseTime = Date.now() - start;
+	const bytes = parseInt(response.headers.get("content-length") ?? '0')
+	// Ensure that the page includes "https://potato.wikibase.cloud/entity/Q1" which should appear in the results
+	const body = await response.text();
+	const success = body.includes("https://potato.wikibase.cloud/entity/Q1") ? 1 : 0;
+	writeData(env, ["dev_wbc_check_0001", url], [response.status, bytes, responseTime, success], [url]);
+}
+
+async function checkElastic (env: Env) {
+	const url = "https://potato.wikibase.cloud/w/index.php?search=haslabel%3Aen";
+	const start = Date.now();
+	const response = await f(url);
+	const responseTime = Date.now() - start;
+	const bytes = parseInt(response.headers.get("content-length") ?? '0')
+	// Ensure that the page includes "wiki/Item:Q1" on it, to indicate that the search succeeded
+	const body = await response.text();
+	const success = body.includes("wiki/Item:Q1") ? 1 : 0;
+	writeData(env, ["dev_wbc_check_0001", url], [response.status, bytes, responseTime, success], [url]);
+}
+
+async function checkMaxlag (env: Env) {
+	const url = "https://potato.wikibase.cloud/w/api.php?action=query&titles=MediaWiki&format=json&maxlag=-1";
+	const start = Date.now();
+	const response = await f(url);
+	const responseTime = Date.now() - start;
+	const bytes = parseInt(response.headers.get("content-length") ?? '0')
+	// Response will be someting like this
+	// {
+	// 	"error": {
+	// 	"code": "maxlag",
+	// 	"info": "Waiting for a database server: 0 seconds lagged.",
+	// 	"host": "sql-mariadb-primary.default.svc.cluster.local",
+	// 	"lag": 0,
+	// 	"type": "db",
+	// 	"*": "See https://potato.wikibase.cloud/w/api.php for API usage. Subscribe to the mediawiki-api-announce mailing list at &lt;https://lists.wikimedia.org/postorius/lists/mediawiki-api-announce.lists.wikimedia.org/&gt; for notice of API deprecations and breaking changes."
+	// 	}
+	// }
+	const lag = response.status === 200 ? (await response.json() as any).error.lag : 0;
+	writeData(env, ["dev_wbc_check_0001", url], [response.status, bytes, responseTime, lag], [url]);
+}
+
+async function check200 (env: Env, url: string) {
+	const start = Date.now();
+	const response = await f(url);
+	const responseTime = Date.now() - start;
+	const bytes = parseInt(response.headers.get("content-length") ?? '0')
+	writeData(env, ["dev_wbc_check_0001", url], [response.status, bytes, responseTime], [url]);
+}
+
+async function f(url: string) {
+	return fetch(url, {
+		headers: {
+			"User-Agent": "addshore/wikibase-cloud-status-checker"
+		}
+	});
+}
+
+async function writeData(env: Env, blobs : string[], doubles: number[], indexes: string[]) {
+	// If we are in wrangler dev
+	if (env.WBCLOUD_STATUS) {
+		env.WBCLOUD_STATUS.writeDataPoint({ 'blobs': blobs, 'doubles': doubles, 'indexes': indexes});
+	} else {
+		// Analytics engine not currently supported locally
+		// https://github.com/cloudflare/workers-sdk/issues/4383
+		console.log("Not in wrangler dev, skipping writeDataPoint");
+		console.log({ 'blobs': blobs, 'doubles': doubles, 'indexes': indexes});
+	}
+}
