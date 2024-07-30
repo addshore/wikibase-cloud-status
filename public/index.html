@@ -9,9 +9,10 @@
                 // Data looks like a list of these entries
                 // {timestamp: '2024-07-29 23:29:00', check: 'http://something-that-was-checked', status: 200, bytes: 0, time: 101, extra: 0}
 
-                // Decide if we consider each thing to be up or not, based on the data
+                // Pre graph processing
                 {
                     for (let entry of data) {
+                        // Decide if we consider each thing to be up or not, based on the data
                         if (entry.check === 'https://potato.wikibase.cloud/query/sparql?query=SELECT%20*%20WHERE%20%7B%3Fa%20%3Fb%20%3Fc%7D') {
                             // if before 2024-07-30 17:00, just count it as up due to a bug
                             if (entry.timestamp < '2024-07-30 17:00:00') {
@@ -32,7 +33,9 @@
                             // everything else, we just want a 200 response
                             entry.upOrNot = entry.status === 200 ? "up" : "degraded";
                         }
+
                     }
+
                 }
 
                 // system-status is General status of all sites
@@ -91,9 +94,39 @@
                     const layout = {
                         title: 'Average response times',
                         xaxis: { title: 'Time' },
-                        yaxis: { title: 'Response time (ms)' }
+                        yaxis: { title: 'Response time (ms)', range: [0, null] }
                     };
                     Plotly.newPlot('system-response', [systemStatus], layout);
+
+                    const maxTime = Math.max(...data.map(entry => entry.time));
+                    const maxTimeEntry = data.find(entry => entry.time === maxTime);
+                    const minTime = Math.min(...data.map(entry => entry.time));
+                    const minTimeEntry = data.find(entry => entry.time === minTime);
+                    Plotly.relayout('system-response', {
+                        annotations: [{
+                            x: minTimeEntry.timestamp,
+                            y: minTimeEntry.time,
+                            xref: 'x',
+                            yref: 'y',
+                            text: `${maxTimeEntry.check} min: ${minTimeEntry.time}ms`,
+                            showarrow: true,
+                            arrowhead: 7,
+                            ax: 0,
+                            ay: -40
+                        },
+                        {
+                            x: maxTimeEntry.timestamp,
+                            y: maxTimeEntry.time,
+                            xref: 'x',
+                            yref: 'y',
+                            text: `${maxTimeEntry.check} max: ${maxTimeEntry.time}ms`,
+                            showarrow: true,
+                            arrowhead: 7,
+                            ax: 0,
+                            ay: -40
+                        }
+                    ]
+                    });
 
                     const movingAverage = {
                         x: data.map(entry => entry.timestamp),
