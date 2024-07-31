@@ -9,6 +9,7 @@ You can run the cron locally with:
 ```sh
 python ./py/index.py 
 ```
+
 ## Deployment
 
 The code is deployed to the `addshore-wikidata-cloud-status` tool.
@@ -38,10 +39,4 @@ You can check the status of the job with:
 
 ```sh
 toolforge jobs list
-```
-
-And you can watch the logs with:
-
-```sh
-tail -f pychecks.out pychecks.err
 ```
