@@ -70,14 +70,23 @@ def edit_check():
     written_time = datetime.datetime.now()
     log_data(check_name, check_start_time, "Item {} created at {}".format(item_id, written_time))
 
-    # make a query to the sparql endpoint every 1 second, looking for the item
+    # make a query to the sparql endpoint for the item we made
     query = """
     SELECT ?item WHERE {
         ?item rdfs:label """ + '"' + label + '"' + """@en.
         }
         """
+
+    shouldCheckElastic = False
+    # if the minuite is divisible by 5, check elastic
+    # This is due to seemingly constant ES checks causing load
+    if check_start_time.minute % 5 == 0:
+        shouldCheckElastic = True
+        log_data(check_name, check_start_time, "Checking elastic this run")
+    else :
+        log_data(check_name, check_start_time, "Not checking elastic this run")
+
     sleep_time = 1
-    max_sleep_time = 60
     counter = 0
     foundQueryService = 0
     foundElastic = 0
@@ -99,7 +108,7 @@ def edit_check():
             # 45-60 seconds = 4 seconds
             # etc, so if we have been waiting for 14min, we will be sleeping for the max of 60 seconds
             # Also add the time the queries took to the sleep time each loop, as a dynamic way to increase sleep time based on load
-            new_sleep_time = min(max((counter//15), 1), max_sleep_time) + queriesTookHowLong
+            new_sleep_time = min(max((counter//15), 1), 60) + queriesTookHowLong
             if new_sleep_time > sleep_time:
                 log_data(check_name, check_start_time, "Sleep time increased to {}".format(new_sleep_time))
                 sleep_time = new_sleep_time
@@ -126,7 +135,7 @@ def edit_check():
                 queryCheckDone = True
 
         # Check in the elastic search index
-        if elasticCheckDone is False:
+        if elasticCheckDone is False and shouldCheckElastic is True:
             url = "https://addshore-wikibase-cloud-status.wikibase.cloud/w/index.php?search=haslabel%3Aen+'{}'".format(label)
             pre_elastic_time = datetime.datetime.now()
             req = requests.get(url, headers={ 'User-Agent': ua })
@@ -149,7 +158,7 @@ def edit_check():
     if foundQueryService == 0:
         log_data(check_name, check_start_time, "Item {} not found in query service".format(item_id))
         record_data("query_create_time", check_start_time, "{},{}".format(int(time_since_written.total_seconds() * 1000), foundQueryService))
-    if foundElastic == 0:
+    if foundElastic == 0 and shouldCheckElastic is True:
         log_data(check_name, check_start_time, "Item {} not found in elastic".format(item_id))
         record_data("elastic_create_time", check_start_time, "{},{}".format(int(time_since_written.total_seconds() * 1000), foundElastic))
 
