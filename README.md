@@ -4,6 +4,8 @@ A cron that runs on cloudflare workers to check the status of wikibase instances
 
 A basic page that shows the status of the wikibase instances over the past 7 days.
 
+![](https://i.imgur.com/4t5q9Wx.png)
+
 ## Future thoughts
 
 Currently the data API only allows access of the last 7 days of data. (And that is also a large ammount for 1 request).
