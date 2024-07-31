@@ -36,7 +36,7 @@ if not username or not password:
 # data: The data to record (in csv format)
 def record_data( check_name, check_start_time, data ):
     log_data(check_name, check_start_time, data)
-    path = "./public_html/data/{}/{}/{}".format(check_start_time.year, check_start_time.month, check_start_time.day)
+    path = "./public_html/data/{}/{:02d}/{:02d}".format(check_start_time.year, check_start_time.month, check_start_time.day)
     os.makedirs(path, exist_ok=True)
     with open("{}/{}.csv".format(path, check_name), "a") as f:
         f.write("{},{}\n".format(check_start_time.strftime("%H:%M:%S"), data))
