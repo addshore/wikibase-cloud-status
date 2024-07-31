@@ -2,12 +2,11 @@
 <head>
     <title>Wikibase cloud status</title>
     <script src="https://cdn.plot.ly/plotly-2.34.0.min.js" charset="utf-8"></script>
-    <script src="cf.js" charset="utf-8"></script>
     <script src="tf.js" charset="utf-8"></script>
 </head>
 <body>
     <h1>Wikibase cloud status</h1>
-    <p>Showing you the last 7 days of data collected every 1 minuite for the wikibase.cloud platform from cloudflare workers</p>
+    <p>Showing you the last 7 days of data collected every 1 minuite for the wikibase.cloud platform from a series of checks</p>
     <span>You may also be interested in <a href="https://wmde.github.io/wikibase-cloud-status/">https://wmde.github.io/wikibase-cloud-status/</a> for the official platform status.</span>
     <p>Checks include:</p>
     <ul>
@@ -17,11 +16,8 @@
         <li>Maxlag < 10</li>
     </ul>
     <a href="https://github.com/addshore/wikibase-cloud-status" target="_blank">Code and data by addshore</a>
-    <div id="cloudflare">
-        <div id="system-status"></div>
-        <div id="system-response"></div>
-    </div>
     <div id="toolforge">
+        <div id="response_time"></div>
         <div id="query_create_time"></div>
     </div>
 </body>
