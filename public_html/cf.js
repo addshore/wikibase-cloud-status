@@ -1,3 +1,8 @@
+// if localhost, return
+if (window.location.hostname === 'localhost') {
+    return;
+}
+
 // Old cloudflare stored data
 fetch('https://wikibase-cloud-status.addshore.workers.dev/data')
     .then(response => response.json())
@@ -207,9 +212,6 @@ fetch('https://wikibase-cloud-status.addshore.workers.dev/data')
                 }
             }
         }
-
-        // Remove the loading text
-        document.getElementById('cf-loading').remove();
 
     })
     .catch(error => console.error(error));

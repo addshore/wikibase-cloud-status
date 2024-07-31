@@ -1,6 +1,4 @@
-data.json
 node_modules
-*.ipynb
 .dev.vars
 .wrangler
 .env
