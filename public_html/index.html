@@ -3,21 +3,30 @@
     <title>Wikibase cloud status</title>
     <script src="https://cdn.plot.ly/plotly-2.34.0.min.js" charset="utf-8"></script>
     <script src="tf.js" charset="utf-8"></script>
+    <style>
+        body {
+            padding: 5px;
+        }
+    </style>
 </head>
 <body>
     <h1>Wikibase cloud status</h1>
     <p>Showing you the last 7 days of data collected every 1 minuite for the wikibase.cloud platform from a series of checks</p>
     <span>You may also be interested in <a href="https://wmde.github.io/wikibase-cloud-status/">https://wmde.github.io/wikibase-cloud-status/</a> for the official platform status.</span>
-    <p>Checks include:</p>
-    <ul>
-        <li>Response time and 200 status of all services</li>
-        <li>Successful query of the sparql endpoint</li>
-        <li>Successful search for an item</li>
-        <li>Maxlag < 10</li>
-    </ul>
-    <a href="https://github.com/addshore/wikibase-cloud-status" target="_blank">Code and data by addshore</a>
+    <br/>
+    <span><a href="https://github.com/addshore/wikibase-cloud-status" target="_blank">Code and data by addshore</a></span>
     <div id="toolforge">
+        <h1>General</h1>
+        <ul>
+            <li>Each service is checked every 1 minuite, and a response time is recorded.</li>
+            <li>Each service is checked for a 200 status code.</li>
+            <li>elastic is also checked to be returning a valid result.</li>
+            <li>Green indicates OK, red is bad!</li>
+        </ul>
+        <div id="upornot_time"></div>
         <div id="response_time"></div>
+        <h1>Actions</h1>
+        <div id="item_create_time"></div>
         <div id="query_create_time"></div>
     </div>
 </body>
