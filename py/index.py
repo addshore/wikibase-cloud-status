@@ -50,7 +50,7 @@ def basic_check(check_name, url):
     request_done_time = datetime.datetime.now()
     request_time = request_done_time - check_start_time
     is200 = 1 if req.status_code == 200 else 0
-    record_data(check_name, check_start_time, "{},{}".format(request_time.total_seconds() * 1000, is200))
+    record_data(check_name, check_start_time, "{},{}".format(int(request_time.total_seconds() * 1000), is200))
     log_data(check_name, check_start_time, "Request took {} ms".format(request_time.total_seconds()*1000))
 
 def elastic_check():
@@ -63,7 +63,7 @@ def elastic_check():
     # check conrent for "WDQS-time: 2024-07-31 19:28:39.226451"
     content = req.content.decode('utf-8')
     found = 1 if "WDQS-time: 2024-07-31 19:28:39.226451" in content else 0
-    record_data("elastic_check", check_start_time, "{},{},{}".format(request_time.total_seconds() * 1000, is200, found))
+    record_data("elastic_check", check_start_time, "{},{},{}".format(int(request_time.total_seconds() * 1000), is200, found))
     log_data("elastic_check", check_start_time, "Request took {} ms".format(request_time.total_seconds()*1000))
 
 # TODO could checlk maxlag, except it always says sql-mariadb-primary.default.svc.cluster.local currently
@@ -81,7 +81,7 @@ def query_check():
     item.write(login)
     post_write_time = datetime.datetime.now()
     write_time = post_write_time - pre_write_time
-    record_data("wb_item_create_time", check_start_time, "{}".format(write_time.total_seconds() * 1000))
+    record_data("wb_item_create_time", check_start_time, "{}".format(int(write_time.total_seconds() * 1000)))
     item_id = item.wd_item_id
     written_time = datetime.datetime.now()
     log_data(check_name, check_start_time, "Item {} created at {}".format(item_id, written_time))
@@ -102,7 +102,7 @@ def query_check():
         post_query_time = datetime.datetime.now()
         if counter == 0:
             query_time = post_query_time - pre_query_time
-            record_data("query_response_time", check_start_time, "{}".format(query_time.total_seconds() * 1000))
+            record_data("query_response_time", check_start_time, "{}".format(int(query_time.total_seconds() * 1000)))
         if len(res['results']['bindings']) > 0:
             log_data(check_name, check_start_time, "Item {} found at {}".format(item_id, datetime.datetime.now()))
             found = 1
@@ -123,7 +123,7 @@ def query_check():
     found_time = datetime.datetime.now()
     # record the time between the two
     time_between = found_time - written_time
-    record_data("query_create_time", check_start_time, "{},{}".format(time_between.total_seconds() * 1000, found))
+    record_data("query_create_time", check_start_time, "{},{}".format(int(time_between.total_seconds() * 1000), found))
 
 # Do the checks every 60 seconds
 while True:

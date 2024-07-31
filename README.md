@@ -49,6 +49,18 @@ Then you can update or start the cron with:
 
 ```sh
 toolforge jobs delete pychecks
-wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/toolforge/py/index.py
-toolforge jobs run pychecks --command pyvenv/bin/python index.py --image python3.11 --continuous
+wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/toolforge/py/index.py -O index.py
+toolforge jobs run pychecks --command "pyvenv/bin/python index.py" --image python3.11 --continuous
+```
+
+You can check the status of the job with:
+
+```sh
+toolforge jobs list
+```
+
+And you can watch the logs with:
+
+```sh
+tail -f pychecks.out pychecks.err
 ```
