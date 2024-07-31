@@ -87,7 +87,7 @@
                     const systemStatus = {
                         x: data.map(entry => entry.timestamp),
                         y: data.map(entry => entry.time),
-                        mode: 'lines+markers',
+                        mode: 'lines',
                         name: 'Overall 1 min',
                         type: 'scatter'
                     };
@@ -191,7 +191,7 @@
                             systems[entry.check] = {
                                 x: [],
                                 y: [],
-                                mode: 'lines+markers',
+                                mode: 'lines',
                                 name: entry.check,
                                 type: 'scatter'
                             };
