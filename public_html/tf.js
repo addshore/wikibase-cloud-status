@@ -1,12 +1,26 @@
+
+baseURL = () => {
+    // if localhost
+    // if (window.location.hostname === "localhost") {
+    //     return "http://localhost:5550/public_html/data";
+    // }
+    return "https://addshore-wikibase-cloud-status.toolforge.org/data";
+}
+
 genUrls = (name, days = 7) => {
     let collection = [];
     for (let i = 0; i < days; i++) {
         const date = new Date();
-        date.setDate(date.getDate() - i);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const file = `https://addshore-wikibase-cloud-status.toolforge.org/data/${year}/${month}/${day}/${name}.csv`;
+        date.setUTCDate(date.getUTCDate() - i);
+        // If the date is before 30 july 2024 ignore it as there is no data
+        // XXX: and if we start having to retrieve all these file,s we hit 429s? D:
+        if (date < new Date('2024-07-30')) {
+            continue;
+        }
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        const file = baseURL() + `/${year}/${month}/${day}/${name}.csv`;
         collection.push(file);
     }
     return collection;
@@ -15,7 +29,7 @@ genUrls = (name, days = 7) => {
 const checkFiles = {
     cloud_home: genUrls('cloud_home'),
     cradle: genUrls('cradle'),
-    elastic_check: genUrls('elastic_check'),
+    elastic_response_time: genUrls('elastic_response_time'),
     query_response_time: genUrls('query_response_time'),
     quickstatements: genUrls('quickstatements'),
     wb_item: genUrls('wb_item')
@@ -71,6 +85,7 @@ for (const [name, files] of Object.entries(checkFiles)) {
 }
 // Also check the non general check files that we need
 fetchAndCache('query_create_time');
+fetchAndCache('elastic_create_time');
 fetchAndCache('wb_item_create_time');
 
 populateGeneralServiceResponseTimeGraph = async () => {
@@ -173,7 +188,7 @@ populateQueryServiceGraph = async () => {
         x: allData.map(row => new Date(row.split(',')[0])),
         y: allData.map(row => row.split(',')[1]),
         mode: 'line',
-        name: 'actual',
+        name: 'queryservice',
         type: 'scatter'
     };
     Plotly.addTraces('query_create_time', [query_create_time]);
@@ -193,7 +208,7 @@ populateQueryServiceGraph = async () => {
         x: allData.map(row => new Date(row.split(',')[0])),
         y: movingAverage,
         mode: 'line',
-        name: '15min AVG',
+        name: 'queryservice 15min AVG',
         type: 'scatter'
     };
     Plotly.addTraces('query_create_time', [moving_average_line]);
@@ -204,7 +219,7 @@ populateQueryServiceGraph = async () => {
         x: queryServiceDown.map(row => new Date(row.split(',')[0])),
         y: queryServiceDown.map(row => 1000), /// 100 seems a good height?
         mode: 'markers',
-        name: 'Failed to query',
+        name: 'Failed to find queryservice',
         type: 'scatter',
         marker: {
             size: 15,
@@ -212,6 +227,54 @@ populateQueryServiceGraph = async () => {
         }
     };
     Plotly.addTraces('query_create_time', [queryServiceDownPoints]);
+}
+
+
+populateElasticGraph = async () => {
+    const allData = await fetchCached('elastic_create_time');
+    const elastic_create_time = {
+        x: allData.map(row => new Date(row.split(',')[0])),
+        y: allData.map(row => row.split(',')[1]),
+        mode: 'line',
+        name: 'elastic',
+        type: 'scatter'
+    };
+    Plotly.addTraces('query_create_time', [elastic_create_time]);
+
+    // add a 15 min moving average
+    const movingAverage = [];
+    for (let i = 0; i < allData.length; i++) {
+        let sum = 0;
+        let count = 0;
+        for (let j = Math.max(0, i - 14); j <= i; j++) {
+            sum += parseInt(allData[j].split(',')[1]);
+            count++;
+        }
+        movingAverage.push(sum / count);
+    }
+    const moving_average_line = {
+        x: allData.map(row => new Date(row.split(',')[0])),
+        y: movingAverage,
+        mode: 'line',
+        name: 'elastic 15min AVG',
+        type: 'scatter'
+    };
+    Plotly.addTraces('query_create_time', [moving_average_line]);
+
+    // Add a point whenever the elastic service is down
+    const elasticServiceDown = allData.filter(row => row.split(',')[2] === '0');
+    const elasticServiceDownPoints = {
+        x: elasticServiceDown.map(row => new Date(row.split(',')[0])),
+        y: elasticServiceDown.map(row => 1000), /// 100 seems a good height?
+        mode: 'markers',
+        name: 'Failed to find elastic',
+        type: 'scatter',
+        marker: {
+            size: 15,
+            color: 'red'
+        }
+    };
+    Plotly.addTraces('query_create_time', [elasticServiceDownPoints]);
 }
 
 populateItemCreationGraph = async () => {
@@ -282,7 +345,7 @@ document.addEventListener("DOMContentLoaded", function() {
     populateGeneralServiceResponseTimeGraph();
     Plotly.newPlot('query_create_time', [], {
         title: {
-            text: 'Item creation, to appearance in query service',
+            text: 'Item creation, to appearance in services',
         },
         xaxis: {},
         yaxis: {
@@ -291,6 +354,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
     populateQueryServiceGraph();
+    populateElasticGraph();
     Plotly.newPlot('item_create_time', [], {
         title: {
             text: 'Item creation',
