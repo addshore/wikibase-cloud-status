@@ -3,3 +3,5 @@ node_modules
 *.ipynb
 .dev.vars
 .wrangler
+.env
+*.csv

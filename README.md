@@ -29,3 +29,26 @@ Make a requst to http://localhost:8787/__scheduled?cron=0+*+*+*+* to trigger the
 Deploy the cron with `npx wrangler deploy` (addshore needs to do this)
 
 The page is deployed via github pages, so you can just push to the main branch to deploy the page.
+
+**Toolforge**
+
+Access:
+
+```sh
+ssh login.toolforge.org
+become addshore-wikidata-cloud-status
+```
+
+Initial setup of python venv (can take ~5 mins):
+
+```sh
+toolforge jobs run bootstrap-venv --command "cd $PWD && ./bootstrap_venv.sh" --image python3.11 --wait
+```
+
+Then you can update or start the cron with:
+
+```sh
+toolforge jobs delete pychecks
+wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/toolforge/py/index.py
+toolforge jobs run pychecks --command pyvenv/bin/python index.py --image python3.11 --continuous
+```
