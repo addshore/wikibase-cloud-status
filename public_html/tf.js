@@ -37,16 +37,23 @@ fetchCached = async (name) => {
 };
 fetchAndCache = async (name) => {
     const files = genUrls(name);
-    const data = await Promise.all(files.map(file => fetch(file)
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            } else {
-                console.log(`Failed to fetch ${file}`);
-                return "";
-            }
-        }))
-    );
+    const data = await Promise.all(files.map(async (file) => {
+        // Add a random delay to avoid hitting the rate limit
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+        attempts = 1;
+        const response = await fetch(file);
+        if (response.ok) {
+            return response.text();
+        } else if (response.status === 429) {
+            // TODO, could retry here, but for now just return empty
+            console.log(`429 for ${file}`);
+            return "";
+        } else {
+            console.log(`Failed to fetch ${file}`);
+            return "";
+        }
+    }));
+
     for (const [index, file] of files.entries()) {
         if (data[index] === "") {
             continue;
@@ -207,6 +214,53 @@ populateQueryServiceGraph = async () => {
     Plotly.addTraces('query_create_time', [queryServiceDownPoints]);
 }
 
+populateItemCreationGraph = async () => {
+    const allData = await fetchCached('wb_item_create_time');
+    const item_create_time = {
+        x: allData.map(row => new Date(row.split(',')[0])),
+        y: allData.map(row => row.split(',')[1]),
+        mode: 'line',
+        name: 'actual',
+        type: 'scatter'
+    };
+    Plotly.addTraces('item_create_time', [item_create_time]);
+
+    // add a 15 min moving average
+    const movingAverage = [];
+    for (let i = 0; i < allData.length; i++) {
+        let sum = 0;
+        let count = 0;
+        for (let j = Math.max(0, i - 14); j <= i; j++) {
+            sum += parseInt(allData[j].split(',')[1]);
+            count++;
+        }
+        movingAverage.push(sum / count);
+    }
+    const moving_average_line = {
+        x: allData.map(row => new Date(row.split(',')[0])),
+        y: movingAverage,
+        mode: 'line',
+        name: '15min AVG',
+        type: 'scatter'
+    };
+    Plotly.addTraces('item_create_time', [moving_average_line]);
+
+    // Add a point whenever the item creation is down
+    const itemCreationDown = allData.filter(row => row.split(',')[2] === '0');
+    const itemCreationDownPoints = {
+        x: itemCreationDown.map(row => new Date(row.split(',')[0])),
+        y: itemCreationDown.map(row => 1000), /// 100 seems a good height?
+        mode: 'markers',
+        name: 'Failed to create',
+        type: 'scatter',
+        marker: {
+            size: 15,
+            color: 'red'
+        }
+    };
+    Plotly.addTraces('item_create_time', [itemCreationDownPoints]);
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     Plotly.newPlot('response_time', [], {
         title: {
@@ -237,4 +291,15 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
     populateQueryServiceGraph();
+    Plotly.newPlot('item_create_time', [], {
+        title: {
+            text: 'Item creation',
+        },
+        xaxis: {},
+        yaxis: {
+            title: 'Time (ms)',
+            rangemode: 'tozero',
+        }
+    });
+    populateItemCreationGraph();
 });
