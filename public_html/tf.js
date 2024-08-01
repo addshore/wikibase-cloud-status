@@ -8,9 +8,10 @@ urlForDate = (date, name) => {
     const day = String(date.getUTCDate()).padStart(2, '0');
 
     isCurrentDay = date.toDateString() === new Date().toDateString();
-    if (!isCurrentDay && isBrowserTools) {
-        return `${toolsStaticURL}/${year}/${month}/${day}/${name}.csv`;
-    }
+    // I get CORS errors for these requests, even when making them from a toolforge hosted site..
+    // if (!isCurrentDay && isBrowserTools) {
+    //     return `${toolsStaticURL}/${year}/${month}/${day}/${name}.csv`;
+    // }
     return `${webserviceURL}/${year}/${month}/${day}/${name}.csv`;
 }
 

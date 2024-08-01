@@ -29,8 +29,6 @@ Initial setup of python venv (can take ~5 mins):
 mkdir -p ~/www/static
 mkdir -p ~/public_html
 wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/.lighttpd.conf -O .lighttpd.conf
-wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/public_html/index.html -O public_html/index.html
-wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/public_html/tf.js -O public_html/tf.js
 webservice start
 # todo wget venve
 toolforge jobs run bootstrap-venv --command "cd $PWD && ./bootstrap_venv.sh" --image python3.11 --wait
