@@ -26,6 +26,8 @@ become addshore-wikidata-cloud-status
 Initial setup of python venv (can take ~5 mins):
 
 ```sh
+mkdir -p ~/www/static
+mkdir -p ~/public_html
 wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/.lighttpd.conf -O .lighttpd.conf
 webservice start
 # todo wget venve

@@ -1,10 +1,18 @@
+webserviceURL = "https://addshore-wikibase-cloud-status.toolforge.org/data"
+toolsStaticURL = "https://tools-static.wmflabs.org/addshore-wikibase-cloud-status/data"
 
-baseURL = () => {
-    // if localhost
-    // if (window.location.hostname === "localhost") {
-    //     return "http://localhost:5550/public_html/data";
-    // }
-    return "https://addshore-wikibase-cloud-status.toolforge.org/data";
+urlForDate = (date, name) => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+
+    isCurrentDay = date.toDateString() === new Date().toDateString();
+    // as we at addshore-wikibase-cloud-status.toolforge.org
+    isBrowserTools = window.location.hostname === "addshore-wikibase-cloud-status.toolforge.org";
+    if (!isCurrentDay && isBrowserTools) {
+        return `${toolsStaticURL}/${year}/${month}/${day}/${name}.csv`;
+    }
+    return `${webserviceURL}/${year}/${month}/${day}/${name}.csv`;
 }
 
 genUrls = (name, days = 7) => {
@@ -12,16 +20,12 @@ genUrls = (name, days = 7) => {
     for (let i = 0; i < days; i++) {
         const date = new Date();
         date.setUTCDate(date.getUTCDate() - i);
-        // If the date is before 30 july 2024 ignore it as there is no data
+        // If the date is before 30 July 2024 ignore it as there is no data
         // XXX: and if we start having to retrieve all these file,s we hit 429s? D:
         if (date < new Date('2024-07-30')) {
             continue;
         }
-        const year = date.getUTCFullYear();
-        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(date.getUTCDate()).padStart(2, '0');
-        const file = baseURL() + `/${year}/${month}/${day}/${name}.csv`;
-        collection.push(file);
+        collection.push(urlForDate(date, name));
     }
     return collection;
 }// Wait for the DOM to load
