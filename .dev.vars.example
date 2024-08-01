@@ -1,2 +1,2 @@
-API_TOKEN = "foo"
-ACCOUNT_ID = "bar"
+MW_USERNAME = "foo"
+MW_PASSWORD = "bar"
