@@ -77,6 +77,8 @@ fetchAndCache = async (name) => {
         data[index] = data[index].split('\n').filter(row => row.trim() !== "").map(row => `${date} ${row}`);
     }
     dataCache[name] = data.flat();
+    // sort the lines by date
+    dataCache[name].sort((a, b) => a.split(',')[0].localeCompare(b.split(',')[0]));
 };
 
 // Retrieve and cache the checkFiles
