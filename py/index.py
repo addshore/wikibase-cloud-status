@@ -179,4 +179,6 @@ while True:
     for check_name, url in basic_checks.items():
         thread = threading.Thread(target=basic_check, args=(check_name, url))
         thread.start()
-    time.sleep(60)
+    # random extra between 0 and 6 seconds
+    # This allows the checks to slowly cycle around the minute, as some things (like query updating) might be pinned to a certain time
+    time.sleep(60+ (6 * (time.time() % 60)))
