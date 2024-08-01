@@ -9,6 +9,7 @@ import requests
 action_api = "https://addshore-wikibase-cloud-status.wikibase.cloud/w/api.php"
 sparql_endpoint = "https://addshore-wikibase-cloud-status.wikibase.cloud/query/sparql"
 ua = "addshore-wikibase-cloud-status/py"
+checkCounter = 0
 
 basic_checks = {
     'cloud_home': "https://www.wikibase.cloud/",
@@ -81,7 +82,7 @@ def edit_check():
     shouldCheckElastic = False
     # if the minuite is divisible by 5, check elastic
     # This is due to seemingly constant ES checks causing load
-    if check_start_time.minute % 5 == 0:
+    if check_start_time.minute % 5 == 0 or checkCounter == 1:
         shouldCheckElastic = True
         log_data(check_name, check_start_time, "Checking elastic this run")
     else :
@@ -165,6 +166,7 @@ def edit_check():
 
 # Do the checks every 60 seconds
 while True:
+    checkCounter += 1
     active_threads = threading.active_count() - 1
     # Preventative measure to stop the process from getting out of control if something goes wrong or services are overloaded
     # But this should mostly be handeled by the backoffs in any looping checks
