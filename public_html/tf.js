@@ -28,6 +28,7 @@ genUrls = (name, days = 7) => {
 
 const checkFiles = {
     cloud_home: genUrls('cloud_home'),
+    cloud_api: genUrls('cloud_api'),
     cradle: genUrls('cradle'),
     elastic_response_time: genUrls('elastic_response_time'),
     query_response_time: genUrls('query_response_time'),
