@@ -12,6 +12,7 @@ ua = "addshore-wikibase-cloud-status/py"
 
 basic_checks = {
     'cloud_home': "https://www.wikibase.cloud/",
+    'cloud_api': "https://www.wikibase.cloud/api/wiki?page=1&per_page=1",
     'wb_item': "https://addshore-wikibase-cloud-status.wikibase.cloud/wiki/Item:Q1",
     'cradle': "https://addshore-wikibase-cloud-status.wikibase.cloud/tools/cradle/",
     'quickstatements': "https://addshore-wikibase-cloud-status.wikibase.cloud/tools/quickstatements/",

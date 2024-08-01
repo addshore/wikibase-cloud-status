@@ -28,15 +28,17 @@ Initial setup of python venv (can take ~5 mins):
 ```sh
 wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/.lighttpd.conf -O .lighttpd.conf
 webservice start
+# todo wget venve
 toolforge jobs run bootstrap-venv --command "cd $PWD && ./bootstrap_venv.sh" --image python3.11 --wait
+wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/py/index.py -O index.py
+toolforge jobs run pychecks --command "pyvenv/bin/python index.py" --image python3.11 --continuous
 ```
 
 Then you can update or start the cron with:
 
 ```sh
-toolforge jobs delete pychecks
 wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/py/index.py -O index.py
-toolforge jobs run pychecks --command "pyvenv/bin/python index.py" --image python3.11 --continuous
+toolforge jobs restart pychecks
 wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/.lighttpd.conf -O .lighttpd.conf
 webservice restart
 ```
