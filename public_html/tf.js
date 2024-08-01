@@ -8,7 +8,7 @@ urlForDate = (date, name) => {
 
     isCurrentDay = date.toDateString() === new Date().toDateString();
     // as we at addshore-wikibase-cloud-status.toolforge.org
-    isBrowserTools = window.location.hostname === "addshore-wikibase-cloud-status.toolforge.org";
+    isBrowserTools = window.location.hostname == "addshore-wikibase-cloud-status.toolforge.org";
     if (!isCurrentDay && isBrowserTools) {
         return `${toolsStaticURL}/${year}/${month}/${day}/${name}.csv`;
     }
