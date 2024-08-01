@@ -1,5 +1,6 @@
-webserviceURL = "https://addshore-wikibase-cloud-status.toolforge.org/data"
-toolsStaticURL = "https://tools-static.wmflabs.org/addshore-wikibase-cloud-status/data"
+const webserviceURL = "https://addshore-wikibase-cloud-status.toolforge.org/data"
+const toolsStaticURL = "https://tools-static.wmflabs.org/addshore-wikibase-cloud-status/data"
+const isBrowserTools = window.location.hostname == "addshore-wikibase-cloud-status.toolforge.org"
 
 urlForDate = (date, name) => {
     const year = date.getUTCFullYear();
@@ -7,8 +8,6 @@ urlForDate = (date, name) => {
     const day = String(date.getUTCDate()).padStart(2, '0');
 
     isCurrentDay = date.toDateString() === new Date().toDateString();
-    // as we at addshore-wikibase-cloud-status.toolforge.org
-    isBrowserTools = window.location.hostname == "addshore-wikibase-cloud-status.toolforge.org";
     if (!isCurrentDay && isBrowserTools) {
         return `${toolsStaticURL}/${year}/${month}/${day}/${name}.csv`;
     }
