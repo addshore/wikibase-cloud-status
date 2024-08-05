@@ -5,6 +5,7 @@ from wikidataintegrator import wdi_core, wdi_login
 from dotenv import load_dotenv
 import threading
 import requests
+import signal
 
 action_api = "https://addshore-wikibase-cloud-status.wikibase.cloud/w/api.php"
 sparql_endpoint = "https://addshore-wikibase-cloud-status.wikibase.cloud/query/sparql"
@@ -171,9 +172,11 @@ while True:
     # Preventative measure to stop the process from getting out of control if something goes wrong or services are overloaded
     # But this should mostly be handeled by the backoffs in any looping checks
     # TODO consider adding timeouts in the requests? but really cloud should kick us off at a reasonable time
-    if active_threads > 69:
+    if active_threads > 100:
+        # TODO consider logging this as a failure of the pending checks? Or just returning and not kiling if the time is at a certain length?
         print("Too many active threads, killing the process")
-        exit(1)
+        os.kill(os.getpid(), signal.SIGINT)
+        break
     print("Starting checks at {} with {} current threads".format(datetime.datetime.now(), active_threads))
     thread = threading.Thread(target=edit_check)
     thread.start()
