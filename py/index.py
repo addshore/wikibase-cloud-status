@@ -113,7 +113,7 @@ def edit_check():
             # Also add the time the queries took to the sleep time each loop, as a dynamic way to increase sleep time based on load
             new_sleep_time = min(max((counter//15), 1), 60) + queriesTookHowLong
             if new_sleep_time > sleep_time:
-                log_data(check_name, check_start_time, "Sleep time increased to {}".format(new_sleep_time))
+                log_data(check_name, check_start_time, "Sleep time increased to {} looking for {}".format(new_sleep_time, item_id))
                 sleep_time = new_sleep_time
             # Actually sleep
             time.sleep(sleep_time)
@@ -169,22 +169,28 @@ def edit_check():
 while True:
     checkCounter += 1
     active_threads = threading.active_count() - 1
+    print("Starting check loop at {} with {} current threads".format(datetime.datetime.now(), active_threads))
+
     # Preventative measure to stop the process from getting out of control if something goes wrong or services are overloaded
     # But this should mostly be handeled by the backoffs in any looping checks
     # TODO consider adding timeouts in the requests? but really cloud should kick us off at a reasonable time
-    if active_threads > 100:
+    if active_threads > 150:
         # TODO consider logging this as a failure of the pending checks? Or just returning and not kiling if the time is at a certain length?
         print("Too many active threads, killing the process")
         os.kill(os.getpid(), signal.SIGINT)
         break
-    print("Starting checks at {} with {} current threads".format(datetime.datetime.now(), active_threads))
-    thread = threading.Thread(target=edit_check)
-    thread.start()
-    # thread = threading.Thread(target=elastic_check)
-    # thread.start()
+
+    # Only start the edit check if active_threads is less than 5, OR if checkCounter divisible by 5
+    # This is to prevent the edit check from running too often and causing issues, and leaving too many open threads running
+    if active_threads < 5 or checkCounter % 5 == 0:
+        thread = threading.Thread(target=edit_check)
+        thread.start()
+
+    # Always do the basic checks
     for check_name, url in basic_checks.items():
         thread = threading.Thread(target=basic_check, args=(check_name, url))
         thread.start()
-    # random extra between 0 and 6 seconds
+
+    # Random extra between 0 and 6 seconds
     # This allows the checks to slowly cycle around the minute, as some things (like query updating) might be pinned to a certain time
     time.sleep(60+ (6 * (time.time() % 60)))
