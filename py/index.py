@@ -102,6 +102,13 @@ def edit_check():
             # Give up after 12 hours
             if counter >= 60*60*12:
                 log_data(check_name, check_start_time, "Giving up after 12 hours")
+                # Also log the failure?
+                if queryCheckDone is False:
+                    log_data(check_name, check_start_time, "Item {} not found in query service in time".format(item_id))
+                    record_data("query_create_time", check_start_time, "0,0")
+                if elasticCheckDone is False and shouldCheckElastic is True:
+                    log_data(check_name, check_start_time, "Item {} not found in elastic in time".format(item_id))
+                    record_data("elastic_create_time", check_start_time, "0,0")
                 break
             # Increase sleep time every 15 seconds, by an additional second, up to a max of 60 seconds
             # So:
