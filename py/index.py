@@ -96,7 +96,7 @@ def edit_check():
     queryCheckDone = False
     elasticCheckDone = False
     queriesTookHowLong = 0 # How long the queries took in total, to be used to dynamically increase sleep time
-    while queryCheckDone is False or elasticCheckDone is False:
+    while queryCheckDone is False or (elasticCheckDone is False and shouldCheckElastic is True):
         # Exit, or sleep, if we are looping
         if counter != 0:
             # Give up after 12 hours
