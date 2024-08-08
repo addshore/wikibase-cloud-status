@@ -191,6 +191,8 @@ while True:
         thread = threading.Thread(target=basic_check, args=(check_name, url))
         thread.start()
 
-    # Random extra between 0 and 6 seconds
+    # Random extra between 0 and 5 seconds
     # This allows the checks to slowly cycle around the minute, as some things (like query updating) might be pinned to a certain time
-    time.sleep(60+ (6 * (time.time() % 60)))
+    main_loop_sleep_time = 60 + (int.from_bytes(os.urandom(1), "big") % 6)
+    print("Sleeping for {} seconds".format(main_loop_sleep_time))
+    time.sleep(main_loop_sleep_time)
