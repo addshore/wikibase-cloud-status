@@ -2,7 +2,7 @@ const webserviceURL = "https://addshore-wikibase-cloud-status.toolforge.org/data
 const toolsStaticURL = "https://tools-static.wmflabs.org/addshore-wikibase-cloud-status/data"
 const isBrowserTools = window.location.hostname == "addshore-wikibase-cloud-status.toolforge.org"
 
-urlForDate = (date, name) => {
+urlForDateDay = (date, name) => {
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     const day = String(date.getUTCDate()).padStart(2, '0');
@@ -23,9 +23,23 @@ genUrls = (name, days = 7) => {
         // If the date is before 30 July 2024 ignore it as there is no data
         // XXX: and if we start having to retrieve all these file,s we hit 429s? D:
         if (date < new Date('2024-07-30')) {
+            console.log(`Ignoring ${date.toISOString()} as it is before 30 July 2024`);
             continue;
         }
-        collection.push(urlForDate(date, name));
+        // If the date is before 26th August, then we need to use the per day files
+        if (date < new Date('2024-08-26')) {
+            console.log(`Adding ${urlForDateDay(date, name)}`);
+            collection.push(urlForDateDay(date, name));
+            continue;
+        }
+        // If the date is the 26th august onwared, we use the weekly files, where the directory is url/year/weeknumber/name.csv
+        // We only need to do this once per week
+        const year = date.getUTCFullYear();
+        const weekNumber = Math.ceil((date - new Date(year, 0, 1)) / 86400000 / 7);
+        if (i === 0 || date.getUTCDay() === 1) {
+            console.log(`Adding ${webserviceURL}/${year}/${weekNumber}/${name}.csv`);
+            collection.push(`${webserviceURL}/${year}/${weekNumber}/${name}.csv`);
+        }
     }
     return collection;
 }// Wait for the DOM to load
