@@ -132,25 +132,23 @@ populateGeneralServiceResponseTimeGraph = async () => {
         const checkSuccess = allData.filter(row => row.split(',')[2] === '1');
         const checkFailurePoints = {
             x: checkFailures.map(row => new Date(row.split(',')[0])),
-            y: checkFailures.map(row => name),
+            y: checkFailures.map(row => -1),
             mode: 'markers',
             name: name,
-            type: 'scatter',
+            type: 'bar',
             marker: {
-                size: 15,
-                color: 'lightred'
-            }
+                color: 'red'
+            },
         };
         const checkSuccessPoints = {
             x: checkSuccess.map(row => new Date(row.split(',')[0])),
-            y: checkSuccess.map(row => name),
+            y: checkSuccess.map(row => 1),
             mode: 'markers',
             name: name,
-            type: 'scatter',
+            type: 'bar',
             marker: {
-                size: 15,
                 color: 'lightgreen'
-            }
+            },
         };
         Plotly.addTraces('upornot_time', [checkFailurePoints]);
         Plotly.addTraces('upornot_time', [checkSuccessPoints]);
@@ -361,7 +359,10 @@ document.addEventListener("DOMContentLoaded", function() {
             text: 'Status',
         },
         xaxis: {},
-        yaxis: {}
+        yaxis: {
+            ticktext: ['down', 'up'],
+            tickvals: [-1, 1]
+        }
     });
     populateGeneralServiceResponseTimeGraph();
     Plotly.newPlot('query_create_time', [], {
