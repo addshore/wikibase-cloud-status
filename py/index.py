@@ -127,9 +127,10 @@ def edit_check():
             # Also add the time the queries took to the sleep time each loop, as a dynamic way to increase sleep time based on load
             new_sleep_time = min(max((counter//15), 1), 60) + queriesTookHowLong
             if new_sleep_time > sleep_time:
-                log_data(check_name, check_start_time, "Sleep time increased to {} looking for {}".format(new_sleep_time, item_id))
+                # log_data(check_name, check_start_time, "Sleep time increased to {} looking for {}".format(new_sleep_time, item_id))
                 sleep_time = new_sleep_time
             # Actually sleep
+            log_data(check_name, check_start_time, "Sleeping for {} seconds".format(sleep_time))
             time.sleep(sleep_time)
         counter += 1
         queriesTookHowLong = 0
