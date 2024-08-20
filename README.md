@@ -14,13 +14,13 @@ python ./py/index.py
 
 ## Deployment
 
-The code is deployed to the `addshore-wikidata-cloud-status` tool.
+The code is deployed to the `addshore-wikibase-cloud-status` tool.
 
 Access:
 
 ```sh
 ssh login.toolforge.org
-become addshore-wikidata-cloud-status
+become addshore-wikibase-cloud-status
 ```
 
 Initial setup of python venv (can take ~5 mins):

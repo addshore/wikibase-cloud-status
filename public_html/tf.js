@@ -352,6 +352,7 @@ document.addEventListener("DOMContentLoaded", function() {
         yaxis: {
             title: 'Time (ms)',
             rangemode: 'tozero',
+            type: 'log',
         }
     });
     Plotly.newPlot('upornot_time', [], {
@@ -373,6 +374,7 @@ document.addEventListener("DOMContentLoaded", function() {
         yaxis: {
             title: 'Time (ms)',
             rangemode: 'tozero',
+            type: 'log',
         }
     });
     populateQueryServiceGraph();
@@ -385,6 +387,7 @@ document.addEventListener("DOMContentLoaded", function() {
         yaxis: {
             title: 'Time (ms)',
             rangemode: 'tozero',
+            type: 'log',
         }
     });
     populateItemCreationGraph();
