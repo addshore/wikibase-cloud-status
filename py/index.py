@@ -41,11 +41,15 @@ def record_data( check_name, check_start_time, data ):
     log_data(check_name, check_start_time, data)
     # Only collect daily data whtn year is 2024 and month is 08
     # IE, this is the last month of daily data collection...
-    if check_start_time.year != 2024 or check_start_time.month != 8:
-        dailyPath = "./public_html/data/{}/{:02d}/{:02d}".format(check_start_time.year, check_start_time.month, check_start_time.day)
-        os.makedirs(dailyPath, exist_ok=True)
-        with open("{}/{}.csv".format(dailyPath, check_name), "a") as f:
-            f.write("{},{}\n".format(check_start_time.strftime("%H:%M:%S"), data))
+    # if check_start_time.year != 2024 or check_start_time.month != 8:
+
+    # Always store daily, until we fix weekly...
+    dailyPath = "./public_html/data/{}/{:02d}/{:02d}".format(check_start_time.year, check_start_time.month, check_start_time.day)
+    os.makedirs(dailyPath, exist_ok=True)
+    with open("{}/{}.csv".format(dailyPath, check_name), "a") as f:
+        f.write("{},{}\n".format(check_start_time.strftime("%H:%M:%S"), data))
+
+    # Always store weekly data
     weeklyPath = "./public_html/data/{}/{:02d}".format(check_start_time.year,check_start_time.isocalendar()[1])
     os.makedirs(weeklyPath, exist_ok=True)
     with open("{}/{}.csv".format(weeklyPath, check_name), "a") as f:

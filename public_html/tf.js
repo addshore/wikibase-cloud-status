@@ -15,7 +15,7 @@ urlForDateDay = (date, name) => {
     return `${webserviceURL}/${year}/${month}/${day}/${name}.csv`;
 }
 
-genUrls = (name, days = 7) => {
+genUrls = (name, days = 5) => {
     let collection = [];
     for (let i = 0; i < days; i++) {
         const date = new Date();
@@ -26,14 +26,16 @@ genUrls = (name, days = 7) => {
             console.log(`Ignoring ${date.toISOString()} as it is before 30 July 2024`);
             continue;
         }
-        // If the date is before 26th August, then we need to use the per day files
-        if (date < new Date('2024-08-26')) {
+        // TODO can un comment this again once per week files actually include the full dates..
+        // // If the date is before 26th August, then we need to use the per day files
+        // if (date < new Date('2024-08-26')) {
             console.log(`Adding ${urlForDateDay(date, name)}`);
             collection.push(urlForDateDay(date, name));
             continue;
-        }
+        // }
         // If the date is the 26th august onwared, we use the weekly files, where the directory is url/year/weeknumber/name.csv
         // We only need to do this once per week
+        // TODO add full date to the weekly files...
         const year = date.getUTCFullYear();
         const weekNumber = Math.ceil((date - new Date(year, 0, 1)) / 86400000 / 7);
         if (i === 0 || date.getUTCDay() === 1) {
