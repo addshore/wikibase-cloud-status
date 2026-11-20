@@ -1,47 +1,164 @@
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>Wikibase cloud status</title>
-    <script src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/plotly.js/2.33.0/plotly.min.js" charset="utf-8"></script>
-    <script src="tf.js" charset="utf-8"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <title>Wikibase Cloud status</title>
+    <script defer src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/plotly.js/2.33.0/plotly.min.js" charset="utf-8"></script>
+    <script defer src="tf.js" charset="utf-8"></script>
     <style>
-        body {
-            padding: 5px;
+        :root {
+            color-scheme: light;
+            --ink: #202122;
+            --muted: #54595d;
+            --line: #eaecf0;
+            --green: #14866d;
+            --green-bg: #168039;
+            --red: #b32424;
+            --red-bg: #b32424;
+            --amber: #ac6600;
+            --amber-bg: #fff4d6;
+            --blue: #36c;
         }
-        #data_status {
-            padding: 0.75rem;
-            border-left: 4px solid #6b7280;
-            background: #f3f4f6;
-        }
-        #data_status[data-state="ok"] {
-            border-left-color: #16803c;
-            background: #edf7ef;
-        }
-        #data_status[data-state="stale"],
-        #data_status[data-state="error"] {
-            border-left-color: #b42318;
-            background: #fff1f0;
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #fff; color: var(--ink); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        a { color: var(--blue); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .page { width: min(940px, calc(100% - 48px)); margin: 0 auto; }
+        header { padding: 48px 0 34px; }
+        .site-brand { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .brand-name { font-size: 24px; font-weight: 650; letter-spacing: -0.02em; }
+        .unofficial-label { color: var(--muted); font-size: 12px; font-weight: 650; }
+        h1 { margin: 4px 0 24px; font-size: 32px; font-weight: 450; letter-spacing: -0.02em; }
+        .status-banner { min-height: 96px; padding: 19px 22px; background: #777; color: #fff; }
+        .status-banner[data-state="healthy"] { background: var(--green-bg); }
+        .status-banner[data-state="down"] { background: var(--red-bg); }
+        .status-banner[data-state="stale"], .status-banner[data-state="error"] { background: var(--amber); }
+        .status-banner strong { display: block; font-size: 21px; font-weight: 700; }
+        .status-banner span { display: block; margin-top: 2px; font-size: 17px; }
+        .intro { margin: 24px 24px 52px; color: var(--muted); font-size: 18px; }
+        .subnote { margin: -35px 24px 54px; color: var(--muted); font-size: 13px; }
+        h2 { margin: 0 0 16px; font-size: 27px; font-weight: 450; letter-spacing: -0.02em; }
+        h3 { margin: 0; font-size: 17px; font-weight: 650; }
+        .section { margin: 0 0 50px; }
+        .section-intro { margin: -7px 0 17px; color: var(--muted); font-size: 14px; }
+        .service-list { border-top: 1px solid var(--line); }
+        .service-row { min-height: 60px; display: grid; grid-template-columns: minmax(190px, 1fr) minmax(130px, auto) 150px minmax(140px, auto); align-items: center; gap: 16px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+        .service-name { font-weight: 600; }
+        .service-state { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+        .service-dot { width: 10px; height: 10px; border-radius: 50%; background: #a7a9ac; }
+        .service-row[data-state="up"] .service-dot { background: var(--green); }
+        .service-row[data-state="down"] .service-dot { background: var(--red); }
+        .service-trend { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+        .service-sparkline { display: block; width: 96px; height: 26px; overflow: visible; }
+        .service-sparkline path { fill: none; stroke: #72777d; stroke-width: 1.8; vector-effect: non-scaling-stroke; }
+        .service-row[data-state="up"] .service-sparkline path { stroke: var(--green); }
+        .service-row[data-state="down"] .service-sparkline path { stroke: var(--red); }
+        [hidden] { display: none !important; }
+        .service-time { color: var(--muted); font-size: 13px; text-align: right; }
+        .incident-list { border-top: 1px solid var(--line); }
+        .incident { border-left: 4px solid var(--amber); padding: 14px 0 14px 18px; }
+        .incident + .incident { border-top: 1px solid var(--line); }
+        .incident-topline { display: flex; justify-content: space-between; gap: 12px; }
+        .incident-meta { color: var(--muted); font-size: 13px; }
+        .incident-state { color: var(--amber); font-size: 12px; font-weight: 700; }
+        .incident[data-state="resolved"] { border-left-color: var(--green); }
+        .incident[data-state="resolved"] .incident-state { color: var(--green); }
+        .incident h3 { margin-top: 3px; }
+        .incident p { margin: 5px 0 8px; color: var(--muted); font-size: 14px; }
+        .incident-archive { margin-top: 6px; border-top: 1px solid var(--line); }
+        .incident-archive > summary { padding: 12px 0; cursor: pointer; color: var(--blue); font-size: 14px; font-weight: 600; }
+        .controls { display: flex; gap: 8px; margin: 0 0 14px; }
+        #history_load_status { align-self: center; margin-left: 6px; color: var(--muted); font-size: 12px; }
+        .controls button { padding: 6px 11px; border: 1px solid #a2a9b1; border-radius: 2px; background: #fff; color: var(--ink); cursor: pointer; font-size: 13px; }
+        .controls button[aria-pressed="true"] { border-color: var(--blue); background: #eaf3ff; color: #1b4f9c; }
+        .chart { width: 100%; height: 330px; }
+        .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .chart-panel { margin-bottom: 24px; }
+        .chart-panel h3 { margin-bottom: 3px; }
+        .chart-panel p { margin: 0; color: var(--muted); font-size: 13px; }
+        .chart-panel .chart { height: 300px; }
+        footer { margin-top: 40px; padding: 20px 0 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+        @media (max-width: 650px) {
+            .page { width: calc(100% - 32px); }
+            header { padding: 32px 0 28px; }
+            .brand-name { font-size: 21px; }
+            .unofficial-label { max-width: 150px; text-align: right; }
+            h1 { font-size: 28px; }
+            .intro { margin: 20px 12px 44px; font-size: 16px; }
+            .subnote { margin: -28px 12px 42px; }
+            h2 { font-size: 24px; }
+            .service-row { grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; }
+            .service-name { grid-column: 1; }
+            .service-state { grid-column: 1; grid-row: 2; }
+            .service-trend { grid-column: 2; grid-row: 1 / span 2; justify-self: end; }
+            .service-sparkline { width: 74px; }
+            .service-time { grid-column: 1 / -1; text-align: left; }
+            .chart-grid { grid-template-columns: 1fr; gap: 0; }
+            .chart { height: 290px; }
+            .status-banner { padding: 16px; }
+            .status-banner strong { font-size: 19px; }
+            .status-banner span { font-size: 15px; }
         }
     </style>
 </head>
 <body>
-    <h1>Wikibase cloud status</h1>
-    <p>Showing you the last 7 days of data collected at regular intervals for the wikibase.cloud platform from a series of checks</p>
-    <span>You may also be interested in <a href="https://wmde.github.io/wikibase-cloud-status/">https://wmde.github.io/wikibase-cloud-status/</a> for the official platform status.</span>
-    <br/>
-    <span><a href="https://github.com/addshore/wikibase-cloud-status" target="_blank">Code and data by addshore</a></span>
-    <p id="data_status" data-state="loading" role="status" aria-live="polite">Loading monitoring data…</p>
-    <div id="toolforge">
-        <h1>General</h1>
-        <ul>
-            <li>Services are checked regularly, mostly every 1 min, elastic every 5 mins, for a general 200 status, and response time.</li>
-            <li>elastic and queryservice are also checked for valid results.</li>
-            <li>Green indicates OK, red is bad!</li>
-        </ul>
-        <div id="upornot_time"></div>
-        <div id="response_time"></div>
-        <h1>Actions</h1>
-        <div id="item_create_time"></div>
-        <div id="query_create_time"></div>
+    <div class="page">
+        <header>
+            <div class="site-brand">
+                <span class="brand-name">Wikibase Cloud</span>
+                <span class="unofficial-label">Independent · unofficial monitor</span>
+            </div>
+        </header>
+        <main>
+            <h1>Status</h1>
+            <section class="status-banner" id="monitoring_badge" data-state="loading" role="status" aria-live="polite">
+                <strong id="monitoring_state">Loading monitor data…</strong>
+                <span id="last_updated">Checking the latest independent probes</span>
+            </section>
+            <p class="intro" id="data_status" data-state="loading" role="status" aria-live="polite">
+                <span class="notice-title">Loading status checks</span><br>
+                <span class="notice-detail">Fetching recent daily observations.</span>
+            </p>
+            <p class="subnote">This community-run monitor is unofficial and not affiliated with or operated by Wikibase Cloud. Green or red applies only to recent recorded checks; missing samples are shown as gaps, not inferred results.</p>
+
+            <section class="section" aria-labelledby="service-heading">
+                <h2 id="service-heading">Services</h2>
+                <p class="section-intro">Latest automated checks. A stale or missing sample is marked unknown.</p>
+                <div class="service-list" id="service_list" aria-live="polite">
+                    <div class="service-row"><span class="service-name">Loading checks…</span><span class="service-state">Please wait</span><span class="service-trend"></span><span class="service-time"></span></div>
+                </div>
+            </section>
+
+            <section class="section" id="incident_section" aria-labelledby="incident-heading">
+                <h2 id="incident-heading">Incident history</h2>
+                <p class="section-intro" id="incident_feed_status" aria-live="polite">Loading recent reports from the official status feed…</p>
+                <div class="incident-list" id="incident_list"></div>
+            </section>
+
+            <section class="section" aria-labelledby="history-heading">
+                <h2 id="history-heading">Automated check history</h2>
+                <p class="section-intro">Choose a rolling window. Gray = no monitor samples (not service downtime); red = official full-platform incident. Overlapping reports are merged.</p>
+                <div class="controls" role="group" aria-label="History range">
+                    <button type="button" data-range="7" aria-pressed="true">7 days</button>
+                    <button type="button" data-range="14">14 days</button>
+                    <button type="button" data-range="30">30 days</button>
+                    <span id="history_load_status" aria-live="polite"></span>
+                </div>
+                <div class="chart-panel"><h3>Availability</h3><p>Markers show recorded successful or failed probes; blank space means no observation.</p><div class="chart" id="availability_chart" aria-label="Availability timeline chart"></div></div>
+                <div class="chart-panel"><h3>Response times</h3><p>Endpoint response times in milliseconds.</p><div class="chart" id="latency_chart" aria-label="Response time chart"></div></div>
+                <div class="chart-grid">
+                    <div class="chart-panel"><h3>Item creation</h3><p>Authenticated write duration.</p><div class="chart" id="item_chart" aria-label="Item creation chart"></div></div>
+                    <div class="chart-panel"><h3>Service propagation</h3><p>Time from item creation to query/search visibility.</p><div class="chart" id="propagation_chart" aria-label="Propagation time chart"></div></div>
+                </div>
+            </section>
+        </main>
+        <footer>
+            <a href="https://wmde.github.io/wikibase-cloud-status/" target="_blank" rel="noopener noreferrer">Official Wikibase Cloud status ↗</a>
+            <span> · </span>
+            <a href="https://github.com/addshore/wikibase-cloud-status" target="_blank" rel="noopener noreferrer">Monitor source and data ↗</a>
+        </footer>
     </div>
 </body>
 </html>
