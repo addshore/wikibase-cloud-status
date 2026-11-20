@@ -49,7 +49,7 @@ Initial setup of the Python venv (can take ~5 mins):
 
 ```sh
 mw toolforge cp --tool=addshore-wikibase-cloud-status py/bootstrap_venv.sh bootstrap_venv.sh
-mw toolforge job run bootstrap-venv --tool=addshore-wikibase-cloud-status --command "cd /data/project/addshore-wikibase-cloud-status && sh bootstrap_venv.sh" --image python3.11
+mw toolforge job run bootstrap-venv --tool=addshore-wikibase-cloud-status --command "cd /data/project/addshore-wikibase-cloud-status && bash bootstrap_venv.sh" --image python3.11
 mw toolforge cp --tool=addshore-wikibase-cloud-status py/index.py index.py
 mw toolforge job run pychecks --tool=addshore-wikibase-cloud-status --command "cd /data/project/addshore-wikibase-cloud-status && pyvenv/bin/python index.py" --image python3.11 --continuous
 ```
@@ -58,9 +58,10 @@ To update the collector:
 
 ```sh
 mw toolforge cp --tool=addshore-wikibase-cloud-status py/index.py index.py
-mw toolforge shell --tool=addshore-wikibase-cloud-status -- /data/project/addshore-wikibase-cloud-status/pyvenv/bin/pip install requests python-dotenv
 mw toolforge job restart pychecks --tool=addshore-wikibase-cloud-status
 ```
+
+If Python dependencies change, stop `pychecks` and rerun the venv bootstrap as a one-off job using the `python3.11` image before starting the collector again. Do not install into `pyvenv` from an interactive shell with a different Python version.
 
 To update the Caddy webservice configuration:
 
