@@ -1,50 +1,27 @@
 const webserviceURL = "https://addshore-wikibase-cloud-status.toolforge.org/data"
-const toolsStaticURL = "https://tools-static.wmflabs.org/addshore-wikibase-cloud-status/data"
-const isBrowserTools = window.location.hostname == "addshore-wikibase-cloud-status.toolforge.org"
+const DAYS_TO_SHOW = 7;
+const BASIC_CHECK_NAMES = ['cloud_home', 'cloud_api', 'cradle', 'quickstatements', 'wb_item'];
 
-urlForDateDay = (date, name) => {
+const urlForDateDay = (date, name) => {
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     const day = String(date.getUTCDate()).padStart(2, '0');
-
-    isCurrentDay = date.toDateString() === new Date().toDateString();
-    // I get CORS errors for these requests, even when making them from a toolforge hosted site..
-    // if (!isCurrentDay && isBrowserTools) {
-    //     return `${toolsStaticURL}/${year}/${month}/${day}/${name}.csv`;
-    // }
     return `${webserviceURL}/${year}/${month}/${day}/${name}.csv`;
 }
 
-genUrls = (name, days = 5) => {
-    let collection = [];
+const genUrls = (name, days = DAYS_TO_SHOW) => {
+    const collection = [];
     for (let i = 0; i < days; i++) {
         const date = new Date();
         date.setUTCDate(date.getUTCDate() - i);
-        // If the date is before 30 July 2024 ignore it as there is no data
-        // XXX: and if we start having to retrieve all these file,s we hit 429s? D:
-        if (date < new Date('2024-07-30')) {
+        if (date < new Date(Date.UTC(2024, 6, 30))) {
             console.log(`Ignoring ${date.toISOString()} as it is before 30 July 2024`);
             continue;
         }
-        // TODO can un comment this again once per week files actually include the full dates..
-        // // If the date is before 26th August, then we need to use the per day files
-        // if (date < new Date('2024-08-26')) {
-            console.log(`Adding ${urlForDateDay(date, name)}`);
-            collection.push(urlForDateDay(date, name));
-            continue;
-        // }
-        // If the date is the 26th august onwared, we use the weekly files, where the directory is url/year/weeknumber/name.csv
-        // We only need to do this once per week
-        // TODO add full date to the weekly files...
-        const year = date.getUTCFullYear();
-        const weekNumber = Math.ceil((date - new Date(year, 0, 1)) / 86400000 / 7);
-        if (i === 0 || date.getUTCDay() === 1) {
-            console.log(`Adding ${webserviceURL}/${year}/${weekNumber}/${name}.csv`);
-            collection.push(`${webserviceURL}/${year}/${weekNumber}/${name}.csv`);
-        }
+        collection.push(urlForDateDay(date, name));
     }
     return collection;
-}// Wait for the DOM to load
+}
 
 const checkFiles = {
     cloud_home: genUrls('cloud_home'),
@@ -56,60 +33,156 @@ const checkFiles = {
     wb_item: genUrls('wb_item')
 };
 
-let dataCache = {};
-fetchCached = async (name) => {
-    let retries = 0;
-    while (!dataCache[name] && retries < 100) {
-        console.log(`Waiting for ${name} data...`);
-        await new Promise(resolve => setTimeout(resolve, 50));
-        retries++;
+const dataCache = {};
+const dataLoadPromises = {};
+const dataFetchFailures = [];
+
+const fetchCsv = async (file) => {
+    let lastError = "unknown error";
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        try {
+            const response = await fetch(file, { cache: 'no-store', signal: controller.signal });
+            if (response.ok) {
+                return await response.text();
+            }
+            if (response.status === 404) {
+                return "";
+            }
+            lastError = `HTTP ${response.status}`;
+            if (response.status < 500 && response.status !== 429) {
+                break;
+            }
+        } catch (error) {
+            lastError = error.message || String(error);
+        } finally {
+            clearTimeout(timeout);
+        }
+        if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 250 * (2 ** attempt)));
+        }
     }
-    if (dataCache[name]) {
-        return dataCache[name];
-    } else {
-        throw new Error(`No data for ${name}`);
-    }
+    dataFetchFailures.push(`${file}: ${lastError}`);
+    console.error(`Unable to fetch ${file}: ${lastError}`);
+    return "";
 };
-fetchAndCache = async (name) => {
+
+const fetchAndCache = async (name) => {
     const files = genUrls(name);
     const data = await Promise.all(files.map(async (file) => {
-        // Add a random delay to avoid hitting the rate limit
         await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
-        attempts = 1;
-        const response = await fetch(file);
-        if (response.ok) {
-            return response.text();
-        } else if (response.status === 429) {
-            // TODO, could retry here, but for now just return empty
-            console.log(`429 for ${file}`);
-            return "";
-        } else {
-            console.log(`Failed to fetch ${file}`);
-            return "";
-        }
+        return fetchCsv(file);
     }));
 
     for (const [index, file] of files.entries()) {
         if (data[index] === "") {
             continue;
         }
-        // Add the dates to each line
-        const date = files[index].match(/\/(\d{4}\/\d{2}\/\d{2})\//)[1];
+        const dateMatch = file.match(/\/(\d{4}\/\d{2}\/\d{2})\//);
+        if (!dateMatch) {
+            dataFetchFailures.push(`Unexpected CSV path: ${file}`);
+            continue;
+        }
+        const date = dateMatch[1];
         data[index] = data[index].split('\n').filter(row => row.trim() !== "").map(row => `${date} ${row}`);
     }
     dataCache[name] = data.flat();
-    // sort the lines by date
     dataCache[name].sort((a, b) => a.split(',')[0].localeCompare(b.split(',')[0]));
 };
 
-// Retrieve and cache the checkFiles
-for (const [name, files] of Object.entries(checkFiles)) {
-    fetchAndCache(name);
+const fetchCached = (name) => {
+    if (!dataLoadPromises[name]) {
+        dataLoadPromises[name] = fetchAndCache(name);
+    }
+    return dataLoadPromises[name].then(() => dataCache[name] || []);
+};
+
+parseRowTimestamp = (row) => {
+    const [date, time] = row.split(',')[0].split(' ');
+    if (!date || !time) {
+        return null;
+    }
+    const [year, month, day] = date.split('/').map(Number);
+    const [hour, minute, second] = time.split(':').map(Number);
+    if (![year, month, day, hour, minute, second].every(Number.isFinite)) {
+        return null;
+    }
+    return Date.UTC(year, month - 1, day, hour, minute, second);
+};
+
+formatAge = (milliseconds) => {
+    const minutes = Math.max(0, Math.floor(milliseconds / 60000));
+    if (minutes < 60) {
+        return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (hours < 48) {
+        return `${hours} hour${hours === 1 ? '' : 's'} ${remainingMinutes} min`;
+    }
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ${hours % 24} hr`;
+};
+
+updateDataFreshness = () => {
+    const status = document.getElementById('data_status');
+    if (!status) {
+        return;
+    }
+
+    const latestFor = (name) => {
+        const timestamps = (dataCache[name] || []).map(parseRowTimestamp).filter(Number.isFinite);
+        return timestamps.length ? Math.max(...timestamps) : null;
+    };
+    const now = Date.now();
+    const basicSamples = BASIC_CHECK_NAMES.map(name => ({ name, timestamp: latestFor(name) }));
+    const presentBasicSamples = basicSamples.filter(sample => sample.timestamp !== null);
+    const latestBasic = presentBasicSamples.length
+        ? Math.max(...presentBasicSamples.map(sample => sample.timestamp))
+        : null;
+    const staleBasic = basicSamples.filter(sample => sample.timestamp === null || now - sample.timestamp > 3 * 60 * 1000);
+    const actionNames = ['wb_item_create_time', 'query_create_time', 'elastic_create_time'];
+    const actionSamples = actionNames.map(name => ({ name, timestamp: latestFor(name) }));
+    const presentActionSamples = actionSamples.filter(sample => sample.timestamp !== null);
+    const latestAction = presentActionSamples.length
+        ? Math.max(...presentActionSamples.map(sample => sample.timestamp))
+        : null;
+    const staleAction = actionSamples.filter(sample => sample.timestamp === null || now - sample.timestamp > 20 * 60 * 1000);
+
+    const messages = [];
+    if (latestBasic === null) {
+        messages.push('No basic endpoint-check data is available.');
+    } else {
+        messages.push(`Latest basic endpoint check: ${formatAge(now - latestBasic)} ago (${new Date(latestBasic).toLocaleString()}).`);
+    }
+    if (latestAction === null) {
+        messages.push('No item/action-check data is available.');
+    } else {
+        messages.push(`Latest item/action check: ${formatAge(now - latestAction)} ago (${new Date(latestAction).toLocaleString()}).`);
+    }
+    if (staleBasic.length || staleAction.length) {
+        status.dataset.state = 'stale';
+        messages.unshift('STALE DATA — green points are historical and do not show current service health.');
+    } else {
+        status.dataset.state = dataFetchFailures.length ? 'error' : 'ok';
+    }
+    if (dataFetchFailures.length) {
+        messages.push(`${dataFetchFailures.length} CSV request(s) failed; see the browser console for details.`);
+    }
+    status.textContent = messages.join(' ');
+};
+
+const metricNames = [...new Set([
+    ...Object.keys(checkFiles),
+    'query_create_time',
+    'elastic_create_time',
+    'wb_item_create_time',
+])];
+for (const name of metricNames) {
+    dataLoadPromises[name] = fetchAndCache(name);
 }
-// Also check the non general check files that we need
-fetchAndCache('query_create_time');
-fetchAndCache('elastic_create_time');
-fetchAndCache('wb_item_create_time');
+Promise.all(Object.values(dataLoadPromises)).then(updateDataFreshness);
 
 populateGeneralServiceResponseTimeGraph = async () => {
     let minuites = [];
@@ -345,52 +418,34 @@ populateItemCreationGraph = async () => {
     Plotly.addTraces('item_create_time', [itemCreationDownPoints]);
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-    Plotly.newPlot('response_time', [], {
-        title: {
-            text: 'Response times',
-        },
-        xaxis: {},
-        yaxis: {
-            title: 'Time (ms)',
-            rangemode: 'tozero',
-            type: 'log',
-        }
-    });
-    Plotly.newPlot('upornot_time', [], {
-        title: {
-            text: 'Status',
-        },
-        xaxis: {},
-        yaxis: {
-            ticktext: ['down', 'up'],
-            tickvals: [-1, 1]
-        }
-    });
-    populateGeneralServiceResponseTimeGraph();
-    Plotly.newPlot('query_create_time', [], {
-        title: {
-            text: 'Item creation, to appearance in services',
-        },
-        xaxis: {},
-        yaxis: {
-            title: 'Time (ms)',
-            rangemode: 'tozero',
-            type: 'log',
-        }
-    });
-    populateQueryServiceGraph();
-    populateElasticGraph();
-    Plotly.newPlot('item_create_time', [], {
-        title: {
-            text: 'Item creation',
-        },
-        xaxis: {},
-        yaxis: {
-            title: 'Time (ms)',
-            rangemode: 'tozero',
-            type: 'log',
-        }
-    });
-    populateItemCreationGraph();
+document.addEventListener("DOMContentLoaded", async function() {
+    await Promise.all([
+        Plotly.newPlot('response_time', [], {
+            title: { text: 'Response times' },
+            xaxis: {},
+            yaxis: { title: 'Time (ms)', rangemode: 'tozero', type: 'log' }
+        }),
+        Plotly.newPlot('upornot_time', [], {
+            title: { text: 'Status' },
+            xaxis: {},
+            yaxis: { ticktext: ['down', 'up'], tickvals: [-1, 1] }
+        }),
+        Plotly.newPlot('query_create_time', [], {
+            title: { text: 'Item creation, to appearance in services' },
+            xaxis: {},
+            yaxis: { title: 'Time (ms)', rangemode: 'tozero', type: 'log' }
+        }),
+        Plotly.newPlot('item_create_time', [], {
+            title: { text: 'Item creation' },
+            xaxis: {},
+            yaxis: { title: 'Time (ms)', rangemode: 'tozero', type: 'log' }
+        })
+    ]);
+    await Promise.all([
+        populateGeneralServiceResponseTimeGraph(),
+        populateQueryServiceGraph(),
+        populateElasticGraph(),
+        populateItemCreationGraph()
+    ]);
+    updateDataFreshness();
 });

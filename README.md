@@ -9,49 +9,71 @@ Under the hood, this is performing checks on https://addshore-wikibase-cloud-sta
 You can run the collector locally with:
 
 ```sh
-python ./py/index.py 
+python ./py/index.py
+```
+
+The authenticated item-creation check uses `MW_USERNAME` and `MW_PASSWORD` from `.dev.vars`, `.env`, or the environment. Without credentials, the basic endpoint checks still run. Run the tests with:
+
+```sh
+python -m unittest discover -s tests -v
 ```
 
 ## Deployment
 
-The collector is a continuous job. The CSVs are served from `public_html` by a small Caddy webservice on Toolforge; it serves static files and does not require PHP.
+The collector is a continuous Toolforge job. The CSVs are served from `public_html` by a small Caddy webservice on Toolforge; it serves static files and does not require PHP.
 
-Access:
+The GitHub Actions workflow deploys **only the GitHub Pages site** from `public_html`. It does not deploy the collector or restart Toolforge jobs. Toolforge deployment below is manual and uses the configured Wikimedia CLI (`mw`) with access to the tool account.
+
+Toolforge access:
 
 ```sh
-ssh login.toolforge.org
-become addshore-wikibase-cloud-status
+mw toolforge shell --tool=addshore-wikibase-cloud-status
 ```
 
-Initial webservice setup (or migration from the old PHP webservice):
+Initial webservice setup:
 
 ```sh
-mkdir -p ~/public_html/data
-wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/toolforge/setup-webservice.sh -O setup-webservice.sh
-# If the old webservice is still running, stop it before starting the trixie service.
-webservice stop
-sh setup-webservice.sh start
+mw toolforge shell --tool=addshore-wikibase-cloud-status -- mkdir -p /data/project/addshore-wikibase-cloud-status/public_html/data
+mw toolforge cp --tool=addshore-wikibase-cloud-status toolforge/setup-webservice.sh setup-webservice.sh
+mw toolforge shell --tool=addshore-wikibase-cloud-status -- sh setup-webservice.sh start
+```
+
+When migrating an existing PHP webservice, stop it once before starting Caddy:
+
+```sh
+mw toolforge shell --tool=addshore-wikibase-cloud-status -- webservice stop
+mw toolforge shell --tool=addshore-wikibase-cloud-status -- sh setup-webservice.sh start
 ```
 
 Initial setup of the Python venv (can take ~5 mins):
 
 ```sh
-toolforge jobs run bootstrap-venv --command "cd $PWD && ./bootstrap_venv.sh" --image python3.11 --wait
-wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/py/index.py -O index.py
-toolforge jobs run pychecks --command "pyvenv/bin/python index.py" --image python3.11 --continuous
+mw toolforge cp --tool=addshore-wikibase-cloud-status py/bootstrap_venv.sh bootstrap_venv.sh
+mw toolforge job run bootstrap-venv --tool=addshore-wikibase-cloud-status --command "cd /data/project/addshore-wikibase-cloud-status && sh bootstrap_venv.sh" --image python3.11
+mw toolforge cp --tool=addshore-wikibase-cloud-status py/index.py index.py
+mw toolforge job run pychecks --tool=addshore-wikibase-cloud-status --command "cd /data/project/addshore-wikibase-cloud-status && pyvenv/bin/python index.py" --image python3.11 --continuous
 ```
 
-To update the collector or restart the Caddy webservice:
+To update the collector:
 
 ```sh
-wget https://raw.githubusercontent.com/addshore/wikibase-cloud-status/main/py/index.py -O index.py
-toolforge jobs restart pychecks
-sh setup-webservice.sh restart
+mw toolforge cp --tool=addshore-wikibase-cloud-status py/index.py index.py
+mw toolforge shell --tool=addshore-wikibase-cloud-status -- /data/project/addshore-wikibase-cloud-status/pyvenv/bin/pip install requests python-dotenv
+mw toolforge job restart pychecks --tool=addshore-wikibase-cloud-status
 ```
 
-You can check the status of the job and webservice with:
+To update the Caddy webservice configuration:
 
 ```sh
-webservice status
-toolforge jobs list
+mw toolforge cp --tool=addshore-wikibase-cloud-status toolforge/setup-webservice.sh setup-webservice.sh
+mw toolforge shell --tool=addshore-wikibase-cloud-status -- sh setup-webservice.sh restart
+```
+
+Set `MW_USERNAME` and `MW_PASSWORD` as Toolforge environment variables for the authenticated item-creation check; never commit credentials. Without them, the collector still runs the basic endpoint checks.
+
+Check job and webservice status with:
+
+```sh
+mw toolforge shell --tool=addshore-wikibase-cloud-status -- webservice status
+mw toolforge job list --tool=addshore-wikibase-cloud-status
 ```

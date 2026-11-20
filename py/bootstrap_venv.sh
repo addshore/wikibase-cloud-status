@@ -17,6 +17,5 @@ pip install -U pip wheel
 
 # Change the following section depending on what your tool needs!
 
-# install some concrete packages
-pip install wikidataintegrator
-pip install python-dotenv
+# Install the collector's direct dependencies.
+pip install requests python-dotenv

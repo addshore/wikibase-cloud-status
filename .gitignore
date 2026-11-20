@@ -1,3 +1,4 @@
 .dev.vars
 .env
 *.csv
+__pycache__/

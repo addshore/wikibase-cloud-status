@@ -7,6 +7,20 @@
         body {
             padding: 5px;
         }
+        #data_status {
+            padding: 0.75rem;
+            border-left: 4px solid #6b7280;
+            background: #f3f4f6;
+        }
+        #data_status[data-state="ok"] {
+            border-left-color: #16803c;
+            background: #edf7ef;
+        }
+        #data_status[data-state="stale"],
+        #data_status[data-state="error"] {
+            border-left-color: #b42318;
+            background: #fff1f0;
+        }
     </style>
 </head>
 <body>
@@ -15,10 +29,11 @@
     <span>You may also be interested in <a href="https://wmde.github.io/wikibase-cloud-status/">https://wmde.github.io/wikibase-cloud-status/</a> for the official platform status.</span>
     <br/>
     <span><a href="https://github.com/addshore/wikibase-cloud-status" target="_blank">Code and data by addshore</a></span>
+    <p id="data_status" data-state="loading" role="status" aria-live="polite">Loading monitoring data…</p>
     <div id="toolforge">
         <h1>General</h1>
         <ul>
-            <li>Servies are checked regularly, mostly every 1 min, elastic every 5 mins, for a general 200 status, and response time.</li>
+            <li>Services are checked regularly, mostly every 1 min, elastic every 5 mins, for a general 200 status, and response time.</li>
             <li>elastic and queryservice are also checked for valid results.</li>
             <li>Green indicates OK, red is bad!</li>
         </ul>
